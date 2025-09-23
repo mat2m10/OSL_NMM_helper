@@ -1,0 +1,104 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+
+      # --- Linux deps (for AppImage/WebKit) ---
+      - name: Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            appstream
+
+      # --- Windows deps (WiX required for MSI) ---
+      - name: Install WiX Toolset
+        if: runner.os == 'Windows'
+        run: choco install wixtoolset --no-progress -y
+
+      - name: Add WiX to PATH
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $wix = Get-ChildItem "C:\Program Files (x86)" -Filter "WiX Toolset v*" | Sort-Object Name -Descending | Select-Object -First 1
+          if (-not $wix) { Write-Error "WiX not found after install"; exit 1 }
+          $bin = Join-Path $wix.FullName "bin"
+          Write-Host "Using WiX at $bin"
+          # Make WiX available to subsequent steps
+          "$bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      # --- Tauri CLI ---
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --locked
+
+      # --- Build ---
+      - name: Build Tauri
+        run: |
+          cd src-tauri
+          cargo tauri build
+
+      # --- Show what was produced (per-OS) ---
+      - name: List bundle outputs
+        shell: bash
+        run: |
+          echo "== Bundle tree =="
+          find src-tauri/target/release/bundle -maxdepth 3 -type f -print || true
+
+      # --- Rename to stable filenames used in your README ---
+      - name: Rename artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="src-tauri/target/release/bundle"
+          case "${{ runner.os }}" in
+            Linux)
+              app=$(find "$OUT/appimage" -name "*.AppImage" | head -n1)
+              [[ -n "$app" ]] || { echo "No AppImage found"; exit 1; }
+              cp "$app" app-linux-x86_64.AppImage
+              ;;
+            macOS)
+              dmg=$(find "$OUT/dmg" -name "*.dmg" | head -n1)
+              [[ -n "$dmg" ]] || { echo "No DMG found"; exit 1; }
+              cp "$dmg" app-macos-x64.dmg
+              ;;
+            Windows)
+              pwsh -Command "
+                \$msi = Get-ChildItem -Path '$OUT/msi' -Filter *.msi -ErrorAction SilentlyContinue | Select-Object -First 1;
+                if (-not \$msi) { Write-Error 'No MSI found under bundle/msi'; exit 1 }
+                Copy-Item \$msi.FullName app-windows-x64.msi
+              "
+              ;;
+          esac
+          ls -alh app-*.*
+      
+      # --- Upload to the tag's Release ---
+      - name: Upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            app-linux-x86_64.AppImage
+            app-macos-x64.dmg
+            app-windows-x64.msi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
