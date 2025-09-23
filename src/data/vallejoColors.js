@@ -1,0 +1,189 @@
+// src/data/vallejoColors.js
+import { hexToRgb } from "../lib/colorMath.js";
+
+// Vallejo bulk palette — primarily Model Color (70.xxx) + Game Color (72.xxx) + a few Model Air (71.xxx).
+// Hex values are *UI display approximations* (great for swatches/pickers; not lab-accurate).
+export const VALLEJO_COLORS_HEX = {
+  // --- Core neutrals / metals ---
+  "70.950 Black": "#000000",
+  "70.951 White": "#f6f6f6",
+  "70.990 Light Grey": "#d7d9db",
+  "70.992 Neutral Grey": "#a7a9ac",
+  "70.994 Dark Grey": "#6a7077",
+  "70.862 Black Grey": "#4b4f54",
+  "70.869 Basalt Grey": "#7b8085",
+  "70.870 Medium Sea Grey": "#a0a4a8",
+  "70.836 London Grey": "#9ba0a3",
+  "70.883 Silver Grey": "#dfe3e6",
+  "70.995 German Grey": "#4a4f54",
+  "70.951 Offwhite": "#f2f3f0",
+  "70.997 Silver (Metal Color approx)": "#c0c0c0",
+  "70.996 Gold": "#d4af37",
+  "70.801 Brass": "#b48a3b",
+  "70.864 Natural Steel": "#b9bdc1",
+  "70.863 Gunmetal Grey": "#7d8389",
+
+  // --- Whites / bones / ivories ---
+  "70.918 Ivory": "#efe5c8",
+  "70.976 Buff": "#e6d29c",
+  "70.821 German Camo Beige WW2": "#d0c39c",
+  "70.912 Tan Yellow": "#e1c17b",
+  "70.847 Dark Sand": "#d8be84",
+  "70.819 Iraqi Sand": "#cfb686",
+  "70.882 Middlestone": "#c7b56f",
+  "70.847 Sand Yellow": "#d9bf8b",
+  "72.034 Bonewhite": "#e8d8b4",
+  "72.010 Dead White": "#f7f7f7",
+
+  // --- Flesh tones ---
+  "70.955 Flat Flesh": "#e3b99e",
+  "70.815 Basic Skin Tone": "#e2b79b",
+  "70.928 Light Flesh": "#f0cdb5",
+  "70.955 Sunny Skintone": "#f3c8a0",
+  "72.003 Pale Flesh": "#eec9b0",
+  "72.004 Elf Skintone": "#e7b9a4",
+  "72.041 Dwarf Skin": "#d39a7d",
+  "72.042 Parasite Brown": "#a15c3b",
+
+  // --- Reds / oranges / pinks ---
+  "70.947 Dark Vermillion": "#b8322a",
+  "70.909 Vermillion": "#d33a2d",
+  "70.926 Red": "#c02a2a",
+  "70.908 Carmine Red": "#a3262e",
+  "70.946 Dark Red": "#7a2023",
+  "70.818 Red Leather": "#7d3b2f",
+  "70.981 Orange Brown": "#b86732",
+  "70.956 Clear Orange": "#ff7f2a",
+  "70.911 Light Orange": "#f68627",
+  "70.851 Bright Orange": "#ff8a2e",
+  "70.910 Orange Red": "#e14a33",
+  "72.011 Gory Red": "#a11f2a",
+  "72.012 Scarlet Red": "#c6252a",
+  "72.009 Hot Orange": "#ff6a2a",
+  "72.013 Squid Pink": "#d37497",
+  "72.014 Warlord Purple": "#7e3a7f",
+  "72.013 Tentacle Pink": "#f28ab5",
+
+  // --- Yellows ---
+  "70.953 Flat Yellow": "#ffd300",
+  "70.915 Deep Yellow": "#ffcf1a",
+  "70.948 Golden Yellow": "#f2b51f",
+  "70.953 Lemon Yellow": "#ffe24d",
+  "72.006 Sun Yellow": "#ffd200",
+  "72.015 Gold Yellow": "#ffb800",
+  "72.005 Moon Yellow": "#ffe24a",
+  "70.913 Yellow Ochre": "#d6a146",
+
+  // --- Greens ---
+  "70.968 Flat Green": "#2f7a3a",
+  "70.970 Deep Green": "#1e5c2f",
+  "70.893 US Dark Green": "#2e4a2e",
+  "70.967 Olive Green": "#566d3b",
+  "70.971 Green Grey": "#8b9a84",
+  "70.894 Russian Green": "#566345",
+  "70.889 Olive Drab": "#5d5b3e",
+  "70.888 Olive Grey": "#6f6c4e",
+  "70.833 German Camo Bright Green": "#5a8a3e",
+  "70.830 German Camo Green": "#4b6b3a",
+  "70.979 German Camo Dark Green": "#2d4b2e",
+  "70.857 Golden Olive": "#8b8e3c",
+  "70.924 Russian Uniform WW2": "#6a6e4a",
+  "70.880 Khaki Grey": "#8b8a6f",
+  "72.030 Goblin Green": "#3b8c3b",
+  "72.028 Dark Green": "#165a36",
+  "72.029 Sick Green": "#27925c",
+  "72.025 Foul Green": "#58a55f",
+  "72.026 Jade Green": "#18a98d",
+  "72.027 Scorpy Green": "#6bdc50",
+
+  // --- Blues / teals ---
+  "70.961 Sky Blue": "#64a9e3",
+  "70.844 Deep Sky Blue": "#19a1e6",
+  "70.962 Blue": "#2a5fb8",
+  "70.965 Prussian Blue": "#1f345f",
+  "70.899 Dark Prussian Blue": "#1a2c5b",
+  "70.963 Medium Blue": "#2d6bc2",
+  "70.930 Dark Blue": "#20355f",
+  "70.808 Blue Green": "#2f8c8a",
+  "70.807 Oxford Blue": "#24324a",
+  "70.961 Light Blue": "#89c4ed",
+  "70.972 Light Sea Grey": "#9fb6c1",
+  "72.022 Ultramarine Blue": "#244a92",
+  "72.021 Magic Blue": "#2a5fb8",
+  "72.023 Electric Blue": "#47b2e6",
+  "72.024 Turquoise": "#2fa8a2",
+
+  // --- Purples / violets ---
+  "70.960 Violet": "#6a3f8a",
+  "70.959 Purple": "#7a3d9a",
+  "70.958 Purple Blue": "#4f3f8a",
+  "70.959 Light Violet": "#9a71b5",
+  "72.016 Royal Purple": "#5f3a88",
+  "72.017 Hexed Lichen": "#4b2e6e",
+  "72.018 Warlord Purple": "#7b3d8f",
+  "72.019 Night Blue": "#1b1f4f",
+
+  // --- Browns / earths ---
+  "70.872 Chocolate Brown": "#4b2f28",
+  "70.871 Leather Brown": "#7b4d2a",
+  "70.983 Flat Earth": "#8a5a32",
+  "70.873 US Field Drab": "#6f5640",
+  "70.984 Flat Brown": "#6b4430",
+  "70.875 Beige Brown": "#7c5a3e",
+  "70.983 Earth": "#8a5a32",
+  "70.879 Green Brown": "#776549",
+  "70.983 Cam. Medium Brown": "#7a5a38",
+  "70.826 German Camo Med Brown": "#6b4a33",
+  "70.822 German Camo Black Brown": "#3b2b23",
+  "70.984 Mahogany Brown": "#5a342d",
+  "70.875 Cork Brown": "#a27852",
+  "70.983 Desert Yellow": "#b58b40",
+  "70.843 Cork Brown (alt)": "#9e7a56",
+  "72.043 Beasty Brown": "#7e4e2e",
+  "72.044 Dark Fleshtone": "#8a4a36",
+  "72.045 Charred Brown": "#4a2f28",
+  "72.062 Earth": "#8a5f3a",
+
+  // --- Greens/khakis for uniforms (extra) ---
+  "70.886 Green Grey": "#8b9484",
+  "70.888 Olive Drab (US)": "#6a674a",
+  "70.889 USA Olive Drab": "#5d5b3e",
+  "70.873 Brown Violet": "#6a6a4a",
+  "70.882 Middlestone (alt)": "#c0b063",
+
+  // --- Black/white variants & liners ---
+  "72.051 Black": "#1c1c1c",
+  "72.050 White": "#f6f6f6",
+  "72.052 Silver": "#c7cbd0",
+  "72.053 Chainmail Silver": "#b2b7bd",
+  "72.054 Gunmetal": "#7a8288",
+  "72.055 Polished Gold": "#d8b54a",
+  "72.056 Glorious Gold": "#e0c467",
+  "72.058 Brassy Brass": "#a77c3c",
+  "72.057 Bright Bronze": "#b8863b",
+
+  // --- Inks (useful as swatch colors for UI) ---
+  "72.086 Red Ink": "#b41e2a",
+  "72.087 Violet Ink": "#6a3394",
+  "72.088 Blue Ink": "#2a3f94",
+  "72.089 Green Ink": "#247a4b",
+  "72.090 Black Ink": "#111213",
+  "72.091 Sepia Ink": "#7a5a3a",
+
+  // --- Model Air (a few common) ---
+  "71.001 White (Air)": "#f6f6f6",
+  "71.003 Red RLM23 (Air)": "#b02c2c",
+  "71.004 Blue (Air)": "#295aa6",
+  "71.007 Olive Green (Air)": "#566b3c",
+  "71.015 Dark Green (Air)": "#2e4c30",
+  "71.031 Middlestone (Air)": "#c5b26d",
+  "71.032 Golden Brown (Air)": "#c78a2c",
+  "71.057 Black (Air)": "#111213",
+  "71.072 Gunmetal (Air)": "#7b8288",
+  "71.063 Silver (Air)": "#c0c0c0",
+};
+
+// Derived palette (RGB arrays) for algorithms that expect numeric channels
+export const VALLEJO_COLORS_RGB = Object.fromEntries(
+  Object.entries(VALLEJO_COLORS_HEX).map(([name, hex]) => [name, hexToRgb(hex)])
+);

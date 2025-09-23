@@ -1,7 +1,9 @@
 // src/main.js
 import * as THREE from "./vendor/three.module.js";
 import { OrbitControls } from "./vendor/OrbitControls.js";
-import { MINIATURE_COLORS_RGB } from "./data/miniatureColors.js";
+import { CITADEL_COLORS_RGB }      from "./data/citadelColors.js";
+import { VALLEJO_COLORS_RGB }      from "./data/vallejoColors.js";
+import { ARMY_PAINTER_COLORS_RGB } from "./data/armyPainterColors.js";
 import { PRESETS } from "./data/presets.js";
 import { buildRecipeHTML, formatRecipeText } from "./ui/recipe.js";
 import { rgbToHex, hexToRgb } from "./lib/colorMath.js";
@@ -32,6 +34,10 @@ const rimIntensity   = byId("rimIntensity");
 const keyEnabled     = byId("keyEnabled");
 const fillEnabled    = byId("fillEnabled");
 const rimEnabled     = byId("rimEnabled");
+
+const brandCitadel   = byId("brandCitadel");
+const brandVallejo   = byId("brandVallejo");
+const brandArmy      = byId("brandArmy");
 
 // az/el/dist inputs
 const keyAz  = byId("keyAz"),  keyEl  = byId("keyEl"),  keyDist  = byId("keyDist");
@@ -97,9 +103,23 @@ scene.add(ground);
    user colour storage / palette
    =========================== */
 const STORAGE_KEY = "osl_nmm_user_colors_v1";
-let runtimePaletteRGB = { ...MINIATURE_COLORS_RGB };
+
+// Brand sources (name -> [r,g,b])
+const BRAND_SOURCES = {
+  citadel: CITADEL_COLORS_RGB,
+  vallejo: VALLEJO_COLORS_RGB,
+  army:    ARMY_PAINTER_COLORS_RGB,
+};
+
+// Current runtime palette (rebuilt from toggles + user colors)
+let runtimePaletteRGB = {};
 let userColorsCache = loadUserColors();
-applyUserColorsToPalette(userColorsCache);
+
+// Safe palette: ensure we never hand an empty map to UI/algorithms
+function getSafePalette() {
+  if (Object.keys(runtimePaletteRGB).length) return runtimePaletteRGB;
+  return { "Macragge Blue [Fallback]": hexToRgb("#1e3c8c") };
+}
 
 function loadUserColors() {
   try {
@@ -121,6 +141,25 @@ function applyUserColorsToPalette(hexMap) {
     runtimePaletteRGB[name] = hexToRgb(norm);
   }
 }
+
+function buildBrandPalette() {
+  const out = {};
+  const add = (label, src) => {
+    for (const [name, rgb] of Object.entries(src)) {
+      out[`${name} [${label}]`] = rgb; // tag to avoid name collisions
+    }
+  };
+  if (!brandCitadel || brandCitadel.checked) add("Citadel", BRAND_SOURCES.citadel);
+  if (brandVallejo && brandVallejo.checked)   add("Vallejo", BRAND_SOURCES.vallejo);
+  if (brandArmy && brandArmy.checked)         add("Army",    BRAND_SOURCES.army);
+  return out;
+}
+
+function rebuildRuntimePalette() {
+  runtimePaletteRGB = buildBrandPalette();
+  applyUserColorsToPalette(userColorsCache); // user colors keep their plain names
+}
+
 function addUserColor(name, hex) {
   const cleanName = (name || "").trim();
   const cleanHex  = (hex  || "").trim();
@@ -130,13 +169,15 @@ function addUserColor(name, hex) {
   const norm = cleanHex.startsWith("#") ? cleanHex : `#${cleanHex}`;
   userColorsCache[cleanName] = norm;
   saveUserColors(userColorsCache);
-  runtimePaletteRGB[cleanName] = hexToRgb(norm);
 
-  populateCitadel();
+  rebuildRuntimePalette();
+  populatePaletteDropdown();
+
   if (citadelSelect) {
     const opt = Array.from(citadelSelect.options).find(o => o.textContent === cleanName);
     if (opt) citadelSelect.value = opt.value;
   }
+
   material.color.set(norm);
   if (baseSwatch) baseSwatch.style.background = norm;
   updateRecipe();
@@ -152,15 +193,25 @@ addColorBtn?.addEventListener("click", () => {
   }
 });
 
+function onBrandToggle() {
+  rebuildRuntimePalette();
+  populatePaletteDropdown();
+  updateRecipe();
+}
+brandCitadel?.addEventListener("change", onBrandToggle);
+brandVallejo?.addEventListener("change", onBrandToggle);
+brandArmy?.addEventListener("change", onBrandToggle);
+
 /* ===========================
    UI wiring (palette, geometry)
    =========================== */
-function populateCitadel() {
+function populatePaletteDropdown() {
   if (!citadelSelect) return;
   const prev = citadelSelect.value?.toLowerCase();
   citadelSelect.innerHTML = "";
 
-  const entries = Object.entries(runtimePaletteRGB).sort((a, b) => a[0].localeCompare(b[0]));
+  // use safe palette so dropdown never ends empty
+  const entries = Object.entries(getSafePalette()).sort((a, b) => a[0].localeCompare(b[0]));
   for (const [name, rgb] of entries) {
     const h = rgbToHex(rgb);
     const opt = document.createElement("option");
@@ -172,7 +223,7 @@ function populateCitadel() {
   const found = Array.from(citadelSelect.options).find(o => o.value.toLowerCase() === prev);
   citadelSelect.value = found ? found.value : citadelSelect.options[0]?.value;
 
-  const currentHex = citadelSelect.value;
+  const currentHex = citadelSelect.value || "#1e3c8c"; // fallback hex
   material.color.set(currentHex);
   if (baseSwatch) baseSwatch.style.background = currentHex;
 }
@@ -211,10 +262,8 @@ function updateRecipe() {
   const rimInt  = (rimEnabled?.checked ? 1 : 0) * parseFloat(rimIntensity?.value || "0.6");
 
   const state = { baseName, baseHex, shape, keyHex, keyInt, fillHex, fillInt, rimHex, rimInt, metalness: material.metalness };
-  recipeBody.innerHTML = buildRecipeHTML(state, runtimePaletteRGB);
+  recipeBody.innerHTML = buildRecipeHTML(state, getSafePalette());
 }
-// initial render of recipe panel (empty samples)
-updateRecipe();
 
 /* ===========================
    lights (via module)
@@ -234,13 +283,20 @@ function applyPreset(id) {
 
   // surface colour
   if (p.objectColor) {
-    const rgb = runtimePaletteRGB[p.objectColor];
-    const objHex = rgb ? rgbToHex(rgb) : "#cccccc";
-    material.color.set(objHex);
-    if (citadelSelect) {
-      const opt = Array.from(citadelSelect.options).find(o => o.value.toLowerCase() === objHex.toLowerCase());
-      if (opt) citadelSelect.value = opt.value;
+    // try direct lookup (if preset stored full "Name [Brand]")
+    let objHex = "#cccccc";
+    const direct = getSafePalette()[p.objectColor];
+    if (direct) {
+      objHex = rgbToHex(direct);
+    } else if (citadelSelect) {
+      // fallback: find option whose text starts with the bare name
+      const opt = Array.from(citadelSelect.options).find(o =>
+        (o.textContent || "").startsWith(p.objectColor)
+      );
+      if (opt) objHex = opt.value;
     }
+    material.color.set(objHex);
+    if (citadelSelect) citadelSelect.value = objHex;
     if (baseSwatch) baseSwatch.style.background = objHex;
   }
 
@@ -257,18 +313,18 @@ function applyStartupState() {
   // Shape
   if (shapeSelect) { shapeSelect.value = "sphere"; setGeometry("sphere"); }
 
-  // Base colour: Macragge Blue
+  // Base colour: prefer real "Macragge Blue" if present; otherwise fallback hex
   const targetName = "Macragge Blue";
-  const rgb = runtimePaletteRGB[targetName];
-  const objHex = rgb ? rgbToHex(rgb) : "#1e3c8c";
-  if (citadelSelect) {
-    const opts  = Array.from(citadelSelect.options);
-    const byTxt = opts.find(o => o.textContent === targetName);
-    const byHex = opts.find(o => o.value.toLowerCase() === objHex.toLowerCase());
-    citadelSelect.value = (byTxt?.value || byHex?.value || citadelSelect.value);
+  let objHex = "#1e3c8c";
+  if (citadelSelect && citadelSelect.options.length) {
+    const opts = Array.from(citadelSelect.options);
+    const byTxt = opts.find(o => (o.textContent || "").startsWith(targetName));
+    const byHex = opts.find(o => (o.value || "").toLowerCase() === objHex.toLowerCase());
+    objHex = (byTxt?.value || byHex?.value || objHex);
+    citadelSelect.value = objHex;
   }
   material.color.set(objHex);
-  baseSwatch && (baseSwatch.style.background = objHex);
+  if (baseSwatch) baseSwatch.style.background = objHex;
 
   // Show preset name (do not apply preset)
   if (presetSelect) presetSelect.value = "nmmSteel";
@@ -309,7 +365,6 @@ presetSelect?.addEventListener("change", (e) => applyPreset(e.target.value));
 /* ===========================
    init & loop
    =========================== */
-populateCitadel();
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if (canvas.width !== w || canvas.height !== h) {
@@ -321,6 +376,9 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
+// Build palette BEFORE any recipe rendering
+rebuildRuntimePalette();
+populatePaletteDropdown();
 applyStartupState();
 
 let isPickerPaused = false;
@@ -340,7 +398,7 @@ tick();
 // utilities for color math (local)
 const HEX_RX = /^#?([0-9a-f]{6})$/i;
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
-const toHex2 = (n) => n.toString(16).padStart(2, "0");
+const toHex2 = (n) => n.toString(16).toString(16).padStart(2, "0"); // ensure 2-digit hex
 
 function hexToVec(hex) {
   const m = HEX_RX.exec(hex);
@@ -350,7 +408,8 @@ function hexToVec(hex) {
 }
 function vecToHex(v) {
   const [r,g,b] = v.map(x => Math.round(x));
-  return `#${toHex2(r)}${toHex2(g)}${toHex2(b)}`;
+  const to2 = (n) => n.toString(16).padStart(2, "0");
+  return `#${to2(r)}${to2(g)}${to2(b)}`;
 }
 function dist2(a,b){ const dx=a[0]-b[0], dy=a[1]-b[1], dz=a[2]-b[2]; return dx*dx+dy*dy+dz*dz; }
 function dot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
@@ -360,7 +419,9 @@ function mul(a,s){ return [a[0]*s, a[1]*s, a[2]*s]; }
 
 // palette getters (dynamic so user-added colors are included)
 function getPalette() {
-  return Object.entries(runtimePaletteRGB).map(([name, rgb]) => {
+  // use safe palette so nearest/mix never crash
+  const src = getSafePalette();
+  return Object.entries(src).map(([name, rgb]) => {
     const h = rgbToHex(rgb);
     return { name, hex: h, vec: hexToVec(h) };
   });
@@ -422,7 +483,8 @@ function sampleCanvasHexAt(clientX, clientY) {
   gl.readPixels(sx, py, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pix);
   const [r,g,b,a] = pix;
   if (a === 0) return null;
-  return `#${toHex2(r)}${toHex2(g)}${toHex2(b)}`;
+  const to2 = (n) => n.toString(16).padStart(2, "0");
+  return `#${to2(r)}${to2(g)}${to2(b)}`;
 }
 
 function setChipAppearance(hex) {
@@ -465,14 +527,14 @@ function renderPickerRecipe() {
       ${baseName} <code>${baseHex.toUpperCase()}</code>
     </p>
     ${lightRow("Key",  !!keyEnabled?.checked,  lightColor, lightIntensity, keyAz, keyEl, keyDist)}
-    ${lightRow("Fill", !!fillEnabled?.checked, fillColor, fillIntensity, fillAz, fillEl, fillDist)}
+    ${lightRow("Fill", !!fillEnabled?.checked, fillColor, fillIntensity, fillEl, fillDist)}
     ${lightRow("Rim",  !!rimEnabled?.checked,  rimColor,  rimIntensity,  rimAz, rimEl, rimDist)}
   `;
 
   if (pickedSamples.length) {
     html += `<hr><p><strong>Samples:</strong></p>`;
     for (const s of pickedSamples) {
-      const close = nearestPaint(s.hex);
+      const close = nearestPaint(s.hex) || { name: "—", hex: "#000000" };
       const mix   = bestTwoPaintMix(s.hex);
       html += `
         <div style="margin:6px 0; line-height:1.35">
@@ -480,7 +542,7 @@ function renderPickerRecipe() {
           <code>${s.hex.toUpperCase()}</code><br/>
           <small>Closest:
             <span class="swatch" style="background:${close.hex}"></span>
-            ${close.name} <code>${close.hex.toUpperCase()}</code>
+            ${close.name} <code>${(close.hex || "#000000").toUpperCase()}</code>
           </small><br/>
           <small>Mix:
             ${mix.aPct}% ${mix.aName}
@@ -586,11 +648,11 @@ function buildCopyTextNow() {
     lines.push("");
     lines.push("Samples:");
     for (const s of pickedSamples) {
-      const close = nearestPaint(s.hex);
+      const close = nearestPaint(s.hex) || { name: "—", hex: "#000000" };
       const mix   = bestTwoPaintMix(s.hex);
       lines.push([
         s.hex.toUpperCase(),
-        `Closest: ${close.name} ${close.hex.toUpperCase()}`,
+        `Closest: ${close.name} ${(close.hex || "#000000").toUpperCase()}`,
         `Mix: ${mix.aPct}% ${mix.aName} + ${mix.bPct}% ${mix.bName} → ${mix.mixHex.toUpperCase()}`
       ].join(" | "));
     }
