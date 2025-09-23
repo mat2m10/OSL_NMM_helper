@@ -3,7 +3,7 @@
   "productName": "OSL NMM Helper",
   
   "version": "0.1.0",
-  "identifier": "com.example.osl_nmm_helper",
+  "identifier": "com.example.osl-nmm-helper",
   "build": {
     "frontendDist": "../src"
   },
