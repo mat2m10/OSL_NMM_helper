@@ -1,14 +1,138 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline';"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OSL NMM Helper</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div id="app">
+      <!-- WebGL canvas -->
       <canvas id="viewport"></canvas>
+
+      <!-- Sidebar (controls) -->
+      <div id="sidebar">
+        <div class="block">
+          <h3>Shape</h3>
+          <label>
+            <select id="shape">
+              <option value="sphere" selected>Sphere</option>
+              <option value="cube">Cube</option>
+              <option value="cylinder">Cylinder</option>
+              <option value="cone">Cone</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="block">
+          <h3>Color picker</h3>
+          <button id="enterPicker">Pick from screen</button>
+          <small class="muted">Freezes the view, then click a pixel</small>
+        </div>
+
+        <div class="block">
+          <h3>Object colour</h3>
+          <div class="inline-field">
+            <select id="citadelColor"></select>
+            <span id="baseSwatch" class="swatch-chip" title="Base colour"></span>
+          </div>
+
+          <div class="add-colour">
+            <input id="newColorName" type="text" placeholder="Add custom color" />
+            <input id="newColorHex" type="color" value="#ffd200" />
+            <button id="addColorBtn">Add</button>
+          </div>
+        </div>
+
+        <div class="block light">
+          <h3>Key light</h3>
+          <label class="row"><span>On</span><input id="keyEnabled" type="checkbox" checked /></label>
+          <label class="row">
+            <span>Colour</span>
+            <div class="inline-field">
+              <input id="lightColor" type="color" value="#ffffff" />
+              <span id="keySwatch" class="swatch-chip" title="Key colour"></span>
+            </div>
+          </label>
+          <label class="row"><span>Intensity</span><input id="lightIntensity" type="range" min="0" max="2" step="0.01" value="1.20" /></label>
+          <div class="grid">
+            <label><span>Az°</span><input id="keyAz" type="range" min="-180" max="180" step="1" value="0" /></label>
+            <label><span>El°</span><input id="keyEl" type="range" min="-5" max="85" step="1" value="45" /></label>
+            <label><span>Dist</span><input id="keyDist" type="range" min="1" max="8" step="0.1" value="5.4" /></label>
+          </div>
+        </div>
+
+        <div class="block light">
+          <h3>Fill light</h3>
+          <label class="row"><span>On</span><input id="fillEnabled" type="checkbox" checked /></label>
+          <label class="row">
+            <span>Colour</span>
+            <div class="inline-field">
+              <input id="fillColor" type="color" value="#88aaff" />
+              <span id="fillSwatch" class="swatch-chip" title="Fill colour"></span>
+            </div>
+          </label>
+          <label class="row"><span>Intensity</span><input id="fillIntensity" type="range" min="0" max="2" step="0.01" value="0.50" /></label>
+          <div class="grid">
+            <label><span>Az°</span><input id="fillAz" type="range" min="-180" max="180" step="1" value="-140" /></label>
+            <label><span>El°</span><input id="fillEl" type="range" min="-5" max="85" step="1" value="20" /></label>
+            <label><span>Dist</span><input id="fillDist" type="range" min="1" max="8" step="0.1" value="4.5" /></label>
+          </div>
+        </div>
+
+        <div class="block light">
+          <h3>Rim light</h3>
+          <label class="row"><span>On</span><input id="rimEnabled" type="checkbox" checked /></label>
+          <label class="row">
+            <span>Colour</span>
+            <div class="inline-field">
+              <input id="rimColor" type="color" value="#ffcc88" />
+              <span id="rimSwatch" class="swatch-chip" title="Rim colour"></span>
+            </div>
+          </label>
+          <label class="row"><span>Intensity</span><input id="rimIntensity" type="range" min="0" max="2" step="0.01" value="0.60" /></label>
+          <div class="grid">
+            <label><span>Az°</span><input id="rimAz" type="range" min="-180" max="180" step="1" value="-135" /></label>
+            <label><span>El°</span><input id="rimEl" type="range" min="-5" max="85" step="1" value="35" /></label>
+            <label><span>Dist</span><input id="rimDist" type="range" min="1" max="8" step="0.1" value="4.8" /></label>
+          </div>
+        </div>
+
+        <div class="block">
+          <h3>Preset</h3>
+          <label>
+            <select id="preset">
+              <option value="">— choose —</option>
+              <option value="nmmSteel">NMM Steel</option>
+              <option value="warmOsl">Warm OSL (Torch)</option>
+              <option value="coldMoon">Cold Moonlight</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- Recipe panel (right) -->
+      <div id="recipe">
+        <div class="recipe-head">
+          <strong>Recipe</strong>
+          <button id="copyRecipe">Copy</button>
+        </div>
+        <div id="recipeBody"></div>
+      </div>
     </div>
-    <script type="module" src="main.js"></script>
+
+    <!-- Full-screen color-picker overlay (outside sidebar/app so it covers the canvas) -->
+    <div id="pickerOverlay" hidden>
+      <div id="pickerCross"></div>
+      <div id="pickerChip">#------</div>
+      <div id="pickerHUD">Click to sample • ESC to exit</div>
+    </div>
+
+    <script type="module" src="./main.js"></script>
   </body>
 </html>
