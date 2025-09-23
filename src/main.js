@@ -7,12 +7,16 @@ import { buildRecipeHTML, formatRecipeText } from "./ui/recipe.js";
 import { rgbToHex, hexToRgb } from "./lib/colorMath.js";
 import { initLights } from "./scene/lights.js";
 
-// ---- small DOM helpers ----
+/* ===========================
+   small DOM + value helpers
+   =========================== */
 const byId = (id) => document.getElementById(id);
 const hexFromInput = (el, fallback = "#ffffff") =>
   el && typeof el.value === "string" ? el.value : fallback;
 
-// ---------- DOM refs ----------
+/* ===========================
+   DOM refs (declare once)
+   =========================== */
 const canvas         = byId("viewport");
 const presetSelect   = byId("preset");
 const shapeSelect    = byId("shape");
@@ -29,11 +33,12 @@ const keyEnabled     = byId("keyEnabled");
 const fillEnabled    = byId("fillEnabled");
 const rimEnabled     = byId("rimEnabled");
 
-// az/el/dist inputs (read-only for rendering the picker recipe)
-const keyAz = byId("keyAz"), keyEl = byId("keyEl"), keyDist = byId("keyDist");
+// az/el/dist inputs
+const keyAz  = byId("keyAz"),  keyEl  = byId("keyEl"),  keyDist  = byId("keyDist");
 const fillAz = byId("fillAz"), fillEl = byId("fillEl"), fillDist = byId("fillDist");
-const rimAz = byId("rimAz"), rimEl = byId("rimEl"), rimDist = byId("rimDist");
+const rimAz  = byId("rimAz"),  rimEl  = byId("rimEl"),  rimDist  = byId("rimDist");
 
+// recipe & copy UI
 const recipePanel   = byId("recipe");
 const recipeBody    = byId("recipeBody");
 const copyRecipeBtn = byId("copyRecipe");
@@ -48,11 +53,16 @@ const pickerOverlay  = byId("pickerOverlay");
 const pickerCross    = byId("pickerCross");
 const pickerChip     = byId("pickerChip");
 
-// ---------- three.js setup ----------
+// picker samples live here
+let pickedSamples = [];
+
+/* ===========================
+   three.js setup
+   =========================== */
 const renderer = new THREE.WebGLRenderer({
   canvas,
   antialias: true,
-  preserveDrawingBuffer: true, // needed for readPixels
+  preserveDrawingBuffer: true, // required for readPixels
 });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -65,7 +75,7 @@ camera.position.set(2.5, 1.8, 3.2);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-// ---------- object & ground ----------
+// object & ground
 let geometry = new THREE.SphereGeometry(1, 64, 64);
 const material = new THREE.MeshStandardMaterial({
   color: 0xcccccc,
@@ -83,7 +93,9 @@ ground.rotation.x = -Math.PI / 2;
 ground.position.y = -1.1;
 scene.add(ground);
 
-// ---- user colour storage / palette ----
+/* ===========================
+   user colour storage / palette
+   =========================== */
 const STORAGE_KEY = "osl_nmm_user_colors_v1";
 let runtimePaletteRGB = { ...MINIATURE_COLORS_RGB };
 let userColorsCache = loadUserColors();
@@ -95,7 +107,9 @@ function loadUserColors() {
     if (!raw) return {};
     const obj = JSON.parse(raw);
     return obj && typeof obj === "object" ? obj : {};
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 function saveUserColors(map) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
@@ -138,7 +152,9 @@ addColorBtn?.addEventListener("click", () => {
   }
 });
 
-// ---------- UI wiring ----------
+/* ===========================
+   UI wiring (palette, geometry)
+   =========================== */
 function populateCitadel() {
   if (!citadelSelect) return;
   const prev = citadelSelect.value?.toLowerCase();
@@ -196,25 +212,18 @@ function updateRecipe() {
 
   const state = { baseName, baseHex, shape, keyHex, keyInt, fillHex, fillInt, rimHex, rimInt, metalness: material.metalness };
   recipeBody.innerHTML = buildRecipeHTML(state, runtimePaletteRGB);
-
-  if (copyRecipeBtn && !copyRecipeBtn._wired) {
-    copyRecipeBtn._wired = true;
-    copyRecipeBtn.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(formatRecipeText(state));
-        copyRecipeBtn.textContent = "Copied!";
-      } catch {
-        copyRecipeBtn.textContent = "Copy failed";
-      }
-      setTimeout(() => (copyRecipeBtn.textContent = "Copy"), 900);
-    });
-  }
 }
+// initial render of recipe panel (empty samples)
+updateRecipe();
 
-// ---- lights (via module) ----
+/* ===========================
+   lights (via module)
+   =========================== */
 const { ambient, LIGHTS, updateLight, setFromConf } = initLights(scene, updateRecipe);
 
-// ---- presets / startup ----
+/* ===========================
+   presets / startup
+   =========================== */
 function applyPreset(id) {
   const p = PRESETS[id];
   if (!p) return;
@@ -264,14 +273,13 @@ function applyStartupState() {
   // Show preset name (do not apply preset)
   if (presetSelect) presetSelect.value = "nmmSteel";
 
-  // Lights: everything zero; fill & rim white
+  // Lights
   if (typeof ambient !== "undefined") ambient.intensity = 0;
 
   if (keyEnabled) keyEnabled.checked = true;
   if (lightColor) lightColor.value = "#ffffff";
   if (lightIntensity) lightIntensity.value = 1.30;
   setFromConf("key", { color: "#ffffff", intensity: 1.3, pos: [0.7, 4, 2] });
-
 
   if (fillEnabled) fillEnabled.checked = false;
   if (fillColor) fillColor.value = "#ffffff";
@@ -286,7 +294,9 @@ function applyStartupState() {
   updateRecipe();
 }
 
-// listeners
+/* ===========================
+   listeners
+   =========================== */
 shapeSelect?.addEventListener("change", (e) => { setGeometry(e.target.value); updateRecipe(); });
 citadelSelect?.addEventListener("change", (e) => {
   const h = e.target.value;
@@ -296,7 +306,9 @@ citadelSelect?.addEventListener("change", (e) => {
 });
 presetSelect?.addEventListener("change", (e) => applyPreset(e.target.value));
 
-// init & loop
+/* ===========================
+   init & loop
+   =========================== */
 populateCitadel();
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -311,7 +323,6 @@ resize();
 
 applyStartupState();
 
-// ---------- render loop ----------
 let isPickerPaused = false;
 function tick() {
   if (!isPickerPaused) {
@@ -326,7 +337,7 @@ tick();
    COLOR PICKER (with samples)
    =========================== */
 
-// ——— utilities for color math ———
+// utilities for color math (local)
 const HEX_RX = /^#?([0-9a-f]{6})$/i;
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const toHex2 = (n) => n.toString(16).padStart(2, "0");
@@ -347,27 +358,26 @@ function sub(a,b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
 function add(a,b){ return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
 function mul(a,s){ return [a[0]*s, a[1]*s, a[2]*s]; }
 
-// Palette as [{name, hex, vec}]
-const PALETTE = Object.entries(runtimePaletteRGB).map(([name, rgb]) => {
-  const h = rgbToHex(rgb);
-  return { name, hex: h, vec: hexToVec(h) };
-});
-
+// palette getters (dynamic so user-added colors are included)
+function getPalette() {
+  return Object.entries(runtimePaletteRGB).map(([name, rgb]) => {
+    const h = rgbToHex(rgb);
+    return { name, hex: h, vec: hexToVec(h) };
+  });
+}
 function nearestPaint(targetHex) {
   const t = hexToVec(targetHex);
   let best = null, bestD = Infinity;
-  for (const p of PALETTE) {
+  for (const p of getPalette()) {
     const d = dist2(t, p.vec);
     if (d < bestD) { bestD = d; best = p; }
   }
   return best;
 }
-
-// Find best two-paint linear mix A + λ(B−A)
 function bestTwoPaintMix(targetHex) {
   const t = hexToVec(targetHex);
-  // quick shortlist: 20 closest single paints first
-  const ranked = [...PALETTE].sort((a,b)=>dist2(t,a.vec)-dist2(t,b.vec)).slice(0,20);
+  const pal = getPalette();
+  const ranked = [...pal].sort((a,b)=>dist2(t,a.vec)-dist2(t,b.vec)).slice(0,20);
   let best = null, bestD = Infinity;
 
   for (let i=0;i<ranked.length;i++){
@@ -375,22 +385,17 @@ function bestTwoPaintMix(targetHex) {
       const A = ranked[i].vec, B = ranked[j].vec;
       const AB = sub(B,A);
       const denom = dot(AB,AB) || 1;
-      let λ = dot(sub(t,A), AB) / denom;
-      λ = clamp01(λ);
-      const mix = add(A, mul(AB, λ));
+      let lambda = dot(sub(t,A), AB) / denom;
+      lambda = clamp01(lambda);
+      const mix = add(A, mul(AB, lambda));
       const d = dist2(t, mix);
       if (d < bestD) {
         bestD = d;
-        best = {
-          a: ranked[i],
-          b: ranked[j],
-          lambda: λ,
-          hex: vecToHex(mix),
-        };
+        best = { a: ranked[i], b: ranked[j], lambda, hex: vecToHex(mix) };
       }
     }
   }
-  if (!best) return null;
+  if (!best) return { aName:"", bName:"", aHex:"#000000", bHex:"#000000", aPct:50, bPct:50, mixHex:"#000000" };
   const bPct = Math.round(best.lambda*100);
   const aPct = 100 - bPct;
   return {
@@ -400,7 +405,7 @@ function bestTwoPaintMix(targetHex) {
   };
 }
 
-// ——— live sampling helpers ———
+// live sampling helpers
 function sampleCanvasHexAt(clientX, clientY) {
   if (!canvas) return null;
   const rect = canvas.getBoundingClientRect();
@@ -425,7 +430,6 @@ function setChipAppearance(hex) {
   const value = hex || "#------";
   pickerChip.textContent = value;
   pickerChip.style.background = hex || "#eee";
-  // contrast
   if (hex) {
     const [r,g,b] = hexToVec(hex);
     const luma = 0.2126*r + 0.7152*g + 0.0722*b;
@@ -435,9 +439,7 @@ function setChipAppearance(hex) {
   }
 }
 
-// ——— picker recipe rendering ———
-let pickedSamples = []; // array of {hex}
-
+// picker recipe rendering
 function renderPickerRecipe() {
   if (!recipeBody) return;
 
@@ -493,20 +495,19 @@ function renderPickerRecipe() {
   }
 
   recipeBody.innerHTML = html;
-  // ensure the panel is visible
   if (recipePanel) recipePanel.style.display = "";
 }
 
-// ——— picker interactions ———
+/* ===========================
+   picker interactions
+   =========================== */
 pickerOverlay?.addEventListener("mousemove", (e) => {
   if (pickerOverlay.hidden) return;
 
-  // crosshair at cursor
   if (pickerCross) {
     pickerCross.style.left = `${e.clientX}px`;
     pickerCross.style.top  = `${e.clientY}px`;
   }
-  // chip near cursor
   if (pickerChip) {
     pickerChip.style.left = `${e.clientX + 16}px`;
     pickerChip.style.top  = `${e.clientY + 16}px`;
@@ -524,11 +525,10 @@ pickerOverlay?.addEventListener("click", async (e) => {
   pickedSamples.push({ hex });
   setChipAppearance(hex);
 
-  // clipboard + prefill
   try { await navigator.clipboard.writeText(hex.toUpperCase()); } catch {}
   if (newColorHex) newColorHex.value = hex;
 
-  renderPickerRecipe(); // update samples list in the recipe panel
+  renderPickerRecipe();
 });
 
 // open / close picker
@@ -537,11 +537,11 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") exitPicker
 pickerOverlay?.addEventListener("contextmenu", (e) => { e.preventDefault(); exitPickerMode(); });
 
 function enterPickerMode() {
-  isPickerPaused = true;      // freeze current frame (buffer preserved)
+  isPickerPaused = true;      // freeze current frame
   controls.enabled = false;
   if (pickerOverlay) pickerOverlay.hidden = false;
   pickedSamples = [];
-  renderPickerRecipe();       // show base + current light setup, empty samples
+  renderPickerRecipe();
 }
 function exitPickerMode() {
   if (pickerOverlay) pickerOverlay.hidden = true;
@@ -549,3 +549,71 @@ function exitPickerMode() {
   isPickerPaused = false;     // resume rendering
   setChipAppearance(null);
 }
+
+/* ===========================
+   Copy button — build text NOW
+   =========================== */
+function buildCopyTextNow() {
+  const { name: baseName, hex: baseHex } = getPaintNameAndHex();
+  const on = (x) => !!x?.checked;
+  const val = (x, f = (v)=>v) => x ? f(x.value) : undefined;
+
+  const key = {
+    enabled: on(keyEnabled),
+    hex: hexFromInput(lightColor, "#ffffff").toUpperCase(),
+    I: Number(val(lightIntensity, parseFloat)).toFixed(2),
+    az: val(keyAz) ?? "0", el: val(keyEl) ?? "0", dist: val(keyDist) ?? "1",
+  };
+  const fill = {
+    enabled: on(fillEnabled),
+    hex: hexFromInput(fillColor, "#88AAFF").toUpperCase(),
+    I: Number(val(fillIntensity, parseFloat)).toFixed(2),
+    az: val(fillAz) ?? "0", el: val(fillEl) ?? "0", dist: val(fillDist) ?? "1",
+  };
+  const rim = {
+    enabled: on(rimEnabled),
+    hex: hexFromInput(rimColor, "#FFCC88").toUpperCase(),
+    I: Number(val(rimIntensity, parseFloat)).toFixed(2),
+    az: val(rimAz) ?? "0", el: val(rimEl) ?? "0", dist: val(rimDist) ?? "1",
+  };
+
+  if (pickedSamples.length) {
+    const lines = [];
+    lines.push(`Base: ${baseName} ${baseHex.toUpperCase()}`);
+    if (key.enabled)  lines.push(`Key:  ${key.hex}, I=${key.I}, az=${key.az}°, el=${key.el}°, dist=${key.dist}`);
+    if (fill.enabled) lines.push(`Fill: ${fill.hex}, I=${fill.I}, az=${fill.az}°, el=${fill.el}°, dist=${fill.dist}`);
+    if (rim.enabled)  lines.push(`Rim:  ${rim.hex}, I=${rim.I}, az=${rim.az}°, el=${rim.el}°, dist=${rim.dist}`);
+    lines.push("");
+    lines.push("Samples:");
+    for (const s of pickedSamples) {
+      const close = nearestPaint(s.hex);
+      const mix   = bestTwoPaintMix(s.hex);
+      lines.push([
+        s.hex.toUpperCase(),
+        `Closest: ${close.name} ${close.hex.toUpperCase()}`,
+        `Mix: ${mix.aPct}% ${mix.aName} + ${mix.bPct}% ${mix.bName} → ${mix.mixHex.toUpperCase()}`
+      ].join(" | "));
+    }
+    return lines.join("\n");
+  }
+
+  const shape = shapeSelect?.value || "sphere";
+  const state = {
+    baseName, baseHex, shape,
+    keyHex:  key.hex,  keyInt:  key.enabled  ? Number(key.I)  : 0,
+    fillHex: fill.hex, fillInt: fill.enabled ? Number(fill.I) : 0,
+    rimHex:  rim.hex,  rimInt:  rim.enabled  ? Number(rim.I)  : 0,
+    metalness: material.metalness
+  };
+  return formatRecipeText(state);
+}
+
+copyRecipeBtn?.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(buildCopyTextNow());
+    copyRecipeBtn.textContent = "Copied!";
+  } catch {
+    copyRecipeBtn.textContent = "Copy failed";
+  }
+  setTimeout(() => (copyRecipeBtn.textContent = "Copy"), 900);
+});
