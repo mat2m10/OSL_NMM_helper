@@ -242,10 +242,13 @@ function applyPreset(id) {
 }
 
 function applyStartupState() {
-  // shape
-  if (shapeSelect) { shapeSelect.value = "sphere"; setGeometry("sphere"); }
+  // 1) Shape
+  if (shapeSelect) { 
+    shapeSelect.value = "sphere"; 
+    setGeometry("sphere"); 
+  }
 
-  // object colour: Macragge Blue
+  // 2) Object colour: Macragge Blue
   const targetName = "Macragge Blue";
   const rgb = runtimePaletteRGB[targetName];
   const objHex = rgb ? rgbToHex(rgb) : "#1e3c8c";
@@ -253,32 +256,42 @@ function applyStartupState() {
     const opts  = Array.from(citadelSelect.options);
     const byTxt = opts.find(o => o.textContent === targetName);
     const byHex = opts.find(o => o.value.toLowerCase() === objHex.toLowerCase());
-    if (byTxt) citadelSelect.value = byTxt.value;
-    else if (byHex) citadelSelect.value = byHex.value;
+    citadelSelect.value = (byTxt?.value || byHex?.value || citadelSelect.value);
   }
   material.color.set(objHex);
-  if (baseSwatch) baseSwatch.style.background = objHex;
+  baseSwatch && (baseSwatch.style.background = objHex);
 
-  // show NMM Steel in the dropdown (no preset apply here)
+  // Show preset name in dropdown (do NOT apply a preset)
   if (presetSelect) presetSelect.value = "nmmSteel";
 
-  // key ON @ 2.0, white
+  // 3) Lights: only key ON; everything else zeroed
+  // Ambient off
+  if (typeof ambient !== "undefined") ambient.intensity = 0;
+
+  // Key ON, white. Pick your default intensity here:
+  //   1.20 = softer look, 2.00 = brighter specular like your earlier build
   if (keyEnabled) keyEnabled.checked = true;
   if (lightColor) lightColor.value = "#ffffff";
-  if (lightIntensity) lightIntensity.value = "2.0";
-  if (LIGHTS?.key) LIGHTS.key.base = 2.0;
+  if (lightIntensity) lightIntensity.value = "1.20"; // change to "2.0" if you prefer
+  if (LIGHTS?.key) LIGHTS.key.base = parseFloat(lightIntensity.value);
   updateLight("key");
 
-  // fill OFF
+  // Fill OFF + intensity 0
   if (fillEnabled) fillEnabled.checked = false;
+  if (fillIntensity) fillIntensity.value = "0";
+  if (LIGHTS?.fill) LIGHTS.fill.base = 0;
   updateLight("fill");
 
-  // rim OFF
+  // Rim OFF + intensity 0
   if (rimEnabled) rimEnabled.checked = false;
+  if (rimIntensity) rimIntensity.value = "0";
+  if (LIGHTS?.rim) LIGHTS.rim.base = 0;
   updateLight("rim");
 
+  // 4) Recipe panel
   updateRecipe();
 }
+
 
 // listeners
 shapeSelect?.addEventListener("change", (e) => { setGeometry(e.target.value); updateRecipe(); });

@@ -154,14 +154,6 @@ html, body {
   border: 1px solid #3a3a41;
   background: #ccc; /* will be updated by JS */
 }
-#pickerOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 9999;
-  cursor: crosshair;
-  background: rgba(0,0,0,0.08);
-}
-#pickerOverlay[hidden] { display: none; }
 
 #pickerHUD {
   position: absolute;
@@ -227,5 +219,51 @@ html, body {
   pointer-events: none;
   z-index: 10000;
 }
+/* --- Force consistent blue accent across platforms (Edge/WebView2) --- */
+:root { --accent: #5aa9ff; }
 
-/* HUD already fine; can stay as-is */
+/* Modern, easy win (works in Edge/Chromium/Firefox) */
+#sidebar input[type="range"],
+#sidebar input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+/* Cross-browser custom range styling (thumb + track) */
+#sidebar input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 6px;
+  background: #2b2b32;               /* track */
+  border-radius: 999px;
+  outline: none;
+}
+
+/* WebKit/Chromium thumb */
+#sidebar input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1px solid #1f1f24;
+  margin-top: -4px; /* centers thumb on 6px track */
+}
+
+/* Firefox track + thumb */
+#sidebar input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: #2b2b32;
+  border-radius: 999px;
+}
+#sidebar input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1px solid #1f1f24;
+}
+
+#sidebar input[type="range"]::-moz-range-progress {
+  height: 6px;
+  background: color-mix(in srgb, var(--accent) 65%, #2b2b32);
+  border-radius: 999px 0 0 999px;
+}
