@@ -1,8 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "test_tauri",
+  "productName": "OSL NMM Helper",
+  
   "version": "0.1.0",
-  "identifier": "com.example.testtauri",
+  "identifier": "com.example.osl_nmm_helper",
   "build": {
     "frontendDist": "../src"
   },
@@ -10,7 +11,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "test_tauri",
+        "title": "OSL NMM Helper",
         "width": 800,
         "height": 600
       }
