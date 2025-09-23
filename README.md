@@ -1,3 +1,19 @@
+## 📥 Downloads  
+
+Get the latest release for your system:  
+
+- 🪟 **Windows (.msi)** → [Download](https://github.com/mat2m10/osl_nmm_helper/releases/latest/download/app-windows-x64.msi)  
+- 🍎 **macOS (.dmg)** → [Download](https://github.com/mat2m10/osl_nmm_helper/releases/latest/download/app-macos-x64.dmg)  
+- 🐧 **Linux (.AppImage)** → [Download](https://github.com/mat2m10/osl_nmm_helper/releases/latest/download/app-linux-x86_64.AppImage)  
+
+---
+
+## ☕ Support  
+
+If this helps your hobby, fuel mine:  
+👉 [Buy me a coffee](https://buymeacoffee.com/mat2m10)  
+
+---
 # 🌌 OSL & NMM Helper  
 
 *Turn your desk lamp into a sun, and your paints into magic.*  
@@ -22,28 +38,11 @@ Think of it as your digital lighting rig and recipe book, built for hobbyists wh
 
 ## 👀 See it in action  
 
-| Steel reflections (NMM) | Torchlight glow (OSL) | Multi-colored setup |
-|--------------------------|-----------------------|---------------------|
-| ![NMM Steel](sample1.png) | ![Warm OSL](sample2.png) | ![Multi-light](sample3.png) |
+| Blue Ultramarine Steel (NMM) | Steel Reflections (NMM) | Torchlight Glow (OSL) | Multi-colored Setup |
+|-------------------------------|--------------------------|------------------------|----------------------|
+| ![Blue Ultramarine Steel](sample1.png) | ![Steel NMM](sample2.png) | ![Warm OSL](sample4.png) | ![Multi-light](sample3.png) |
 
----
 
-## 📥 Downloads  
-
-Get the latest release for your system:  
-
-- 🪟 **Windows (.msi)** → [Download](https://github.com/mat2m10/osl_nmm_helper/releases/latest/download/app-windows-x64.msi)  
-- 🍎 **macOS (.dmg)** → [Download](https://github.com/mat2m10/osl_nmm_helper/releases/latest/download/app-macos-x64.dmg)  
-- 🐧 **Linux (.AppImage)** → [Download](https://github.com/mat2m10/osl_nmm_helper/releases/latest/download/app-linux-x86_64.AppImage)  
-
----
-
-## ☕ Support  
-
-If this helps your hobby, fuel mine:  
-👉 [Buy me a coffee](https://buymeacoffee.com/mat2m10)  
-
----
 
 ## ⚙️ Tech Notes  
 
