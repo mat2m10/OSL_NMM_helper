@@ -29,12 +29,18 @@ const keyEnabled     = byId("keyEnabled");
 const fillEnabled    = byId("fillEnabled");
 const rimEnabled     = byId("rimEnabled");
 
-const recipeBody     = byId("recipeBody");
-const copyRecipeBtn  = byId("copyRecipe");
-const newColorName   = byId("newColorName");
-const newColorHex    = byId("newColorHex");
-const addColorBtn    = byId("addColorBtn");
-const baseSwatch     = byId("baseSwatch");
+// az/el/dist inputs (read-only for rendering the picker recipe)
+const keyAz = byId("keyAz"), keyEl = byId("keyEl"), keyDist = byId("keyDist");
+const fillAz = byId("fillAz"), fillEl = byId("fillEl"), fillDist = byId("fillDist");
+const rimAz = byId("rimAz"), rimEl = byId("rimEl"), rimDist = byId("rimDist");
+
+const recipePanel   = byId("recipe");
+const recipeBody    = byId("recipeBody");
+const copyRecipeBtn = byId("copyRecipe");
+const newColorName  = byId("newColorName");
+const newColorHex   = byId("newColorHex");
+const addColorBtn   = byId("addColorBtn");
+const baseSwatch    = byId("baseSwatch");
 
 // color-picker UI
 const enterPickerBtn = byId("enterPicker");
@@ -46,8 +52,7 @@ const pickerChip     = byId("pickerChip");
 const renderer = new THREE.WebGLRenderer({
   canvas,
   antialias: true,
-  // keep last frame so we can sample it
-  preserveDrawingBuffer: true,
+  preserveDrawingBuffer: true, // needed for readPixels
 });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -90,9 +95,7 @@ function loadUserColors() {
     if (!raw) return {};
     const obj = JSON.parse(raw);
     return obj && typeof obj === "object" ? obj : {};
-  } catch {
-    return {};
-  }
+  } catch { return {}; }
 }
 function saveUserColors(map) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
@@ -242,13 +245,10 @@ function applyPreset(id) {
 }
 
 function applyStartupState() {
-  // 1) Shape
-  if (shapeSelect) { 
-    shapeSelect.value = "sphere"; 
-    setGeometry("sphere"); 
-  }
+  // Shape
+  if (shapeSelect) { shapeSelect.value = "sphere"; setGeometry("sphere"); }
 
-  // 2) Object colour: Macragge Blue
+  // Base colour: Macragge Blue
   const targetName = "Macragge Blue";
   const rgb = runtimePaletteRGB[targetName];
   const objHex = rgb ? rgbToHex(rgb) : "#1e3c8c";
@@ -261,37 +261,30 @@ function applyStartupState() {
   material.color.set(objHex);
   baseSwatch && (baseSwatch.style.background = objHex);
 
-  // Show preset name in dropdown (do NOT apply a preset)
+  // Show preset name (do not apply preset)
   if (presetSelect) presetSelect.value = "nmmSteel";
 
-  // 3) Lights: only key ON; everything else zeroed
-  // Ambient off
+  // Lights: everything zero; fill & rim white
   if (typeof ambient !== "undefined") ambient.intensity = 0;
 
-  // Key ON, white. Pick your default intensity here:
-  //   1.20 = softer look, 2.00 = brighter specular like your earlier build
   if (keyEnabled) keyEnabled.checked = true;
   if (lightColor) lightColor.value = "#ffffff";
-  if (lightIntensity) lightIntensity.value = "1.20"; // change to "2.0" if you prefer
-  if (LIGHTS?.key) LIGHTS.key.base = parseFloat(lightIntensity.value);
-  updateLight("key");
+  if (lightIntensity) lightIntensity.value = 1.30;
+  setFromConf("key", { color: "#ffffff", intensity: 1.3, pos: [0.7, 4, 2] });
 
-  // Fill OFF + intensity 0
+
   if (fillEnabled) fillEnabled.checked = false;
+  if (fillColor) fillColor.value = "#ffffff";
   if (fillIntensity) fillIntensity.value = "0";
-  if (LIGHTS?.fill) LIGHTS.fill.base = 0;
-  updateLight("fill");
+  setFromConf("fill", { color: "#ffffff", intensity: 0, pos: [0,0,1] });
 
-  // Rim OFF + intensity 0
   if (rimEnabled) rimEnabled.checked = false;
+  if (rimColor) rimColor.value = "#ffffff";
   if (rimIntensity) rimIntensity.value = "0";
-  if (LIGHTS?.rim) LIGHTS.rim.base = 0;
-  updateLight("rim");
+  setFromConf("rim", { color: "#ffffff", intensity: 0, pos: [0,0,1] });
 
-  // 4) Recipe panel
   updateRecipe();
 }
-
 
 // listeners
 shapeSelect?.addEventListener("change", (e) => { setGeometry(e.target.value); updateRecipe(); });
@@ -330,34 +323,101 @@ function tick() {
 tick();
 
 /* ===========================
-   COLOR PICKER IMPLEMENTATION
+   COLOR PICKER (with samples)
    =========================== */
 
-// DPR-correct sampling of the WebGL canvas at window coords
+// ——— utilities for color math ———
+const HEX_RX = /^#?([0-9a-f]{6})$/i;
+const clamp01 = (v) => Math.min(1, Math.max(0, v));
+const toHex2 = (n) => n.toString(16).padStart(2, "0");
+
+function hexToVec(hex) {
+  const m = HEX_RX.exec(hex);
+  if (!m) return null;
+  const v = parseInt(m[1], 16);
+  return [ (v>>16)&255, (v>>8)&255, v&255 ];
+}
+function vecToHex(v) {
+  const [r,g,b] = v.map(x => Math.round(x));
+  return `#${toHex2(r)}${toHex2(g)}${toHex2(b)}`;
+}
+function dist2(a,b){ const dx=a[0]-b[0], dy=a[1]-b[1], dz=a[2]-b[2]; return dx*dx+dy*dy+dz*dz; }
+function dot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+function sub(a,b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+function add(a,b){ return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+function mul(a,s){ return [a[0]*s, a[1]*s, a[2]*s]; }
+
+// Palette as [{name, hex, vec}]
+const PALETTE = Object.entries(runtimePaletteRGB).map(([name, rgb]) => {
+  const h = rgbToHex(rgb);
+  return { name, hex: h, vec: hexToVec(h) };
+});
+
+function nearestPaint(targetHex) {
+  const t = hexToVec(targetHex);
+  let best = null, bestD = Infinity;
+  for (const p of PALETTE) {
+    const d = dist2(t, p.vec);
+    if (d < bestD) { bestD = d; best = p; }
+  }
+  return best;
+}
+
+// Find best two-paint linear mix A + λ(B−A)
+function bestTwoPaintMix(targetHex) {
+  const t = hexToVec(targetHex);
+  // quick shortlist: 20 closest single paints first
+  const ranked = [...PALETTE].sort((a,b)=>dist2(t,a.vec)-dist2(t,b.vec)).slice(0,20);
+  let best = null, bestD = Infinity;
+
+  for (let i=0;i<ranked.length;i++){
+    for (let j=i+1;j<ranked.length;j++){
+      const A = ranked[i].vec, B = ranked[j].vec;
+      const AB = sub(B,A);
+      const denom = dot(AB,AB) || 1;
+      let λ = dot(sub(t,A), AB) / denom;
+      λ = clamp01(λ);
+      const mix = add(A, mul(AB, λ));
+      const d = dist2(t, mix);
+      if (d < bestD) {
+        bestD = d;
+        best = {
+          a: ranked[i],
+          b: ranked[j],
+          lambda: λ,
+          hex: vecToHex(mix),
+        };
+      }
+    }
+  }
+  if (!best) return null;
+  const bPct = Math.round(best.lambda*100);
+  const aPct = 100 - bPct;
+  return {
+    aName: best.a.name, aHex: best.a.hex,
+    bName: best.b.name, bHex: best.b.hex,
+    aPct, bPct, mixHex: best.hex
+  };
+}
+
+// ——— live sampling helpers ———
 function sampleCanvasHexAt(clientX, clientY) {
   if (!canvas) return null;
   const rect = canvas.getBoundingClientRect();
-
-  // only sample when inside canvas area
   if (clientX < rect.left || clientX >= rect.right || clientY < rect.top || clientY >= rect.bottom) {
     return null;
   }
-
-  const fbW = canvas.width;
-  const fbH = canvas.height;
+  const fbW = canvas.width, fbH = canvas.height;
   const sx = Math.floor((clientX - rect.left) * (fbW / rect.width));
   const sy = Math.floor((clientY - rect.top)  * (fbH / rect.height));
-  const py = fbH - sy - 1; // WebGL origin bottom-left
+  const py = fbH - sy - 1;
 
   const gl = renderer.getContext();
   const pix = new Uint8Array(4);
   gl.readPixels(sx, py, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pix);
-  const [r, g, b, a] = pix;
-
-  if (a === 0) return null; // transparent (shouldn’t happen with solid bg)
-
-  const toHex = (v) => v.toString(16).padStart(2, "0");
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  const [r,g,b,a] = pix;
+  if (a === 0) return null;
+  return `#${toHex2(r)}${toHex2(g)}${toHex2(b)}`;
 }
 
 function setChipAppearance(hex) {
@@ -365,12 +425,9 @@ function setChipAppearance(hex) {
   const value = hex || "#------";
   pickerChip.textContent = value;
   pickerChip.style.background = hex || "#eee";
-
-  // flip text for contrast
+  // contrast
   if (hex) {
-    const r = parseInt(hex.slice(1,3),16);
-    const g = parseInt(hex.slice(3,5),16);
-    const b = parseInt(hex.slice(5,7),16);
+    const [r,g,b] = hexToVec(hex);
     const luma = 0.2126*r + 0.7152*g + 0.0722*b;
     pickerChip.style.color = luma < 140 ? "#fff" : "#111";
   } else {
@@ -378,7 +435,69 @@ function setChipAppearance(hex) {
   }
 }
 
-// Follow cursor: move cross + chip, update live hex
+// ——— picker recipe rendering ———
+let pickedSamples = []; // array of {hex}
+
+function renderPickerRecipe() {
+  if (!recipeBody) return;
+
+  const { name: baseName, hex: baseHex } = getPaintNameAndHex();
+
+  const lightRow = (label, enabled, colInput, intInput, azEl, elEl, distEl) => {
+    if (!enabled) return "";
+    const hex = hexFromInput(colInput, "#ffffff").toUpperCase();
+    const I = parseFloat(intInput?.value || "0").toFixed(2);
+    const az = azEl?.value ?? "0";
+    const el = elEl?.value ?? "0";
+    const di = distEl?.value ?? "1";
+    return `
+      <p><strong>${label}:</strong>
+        <span class="swatch" style="background:${hex}"></span>
+        ${hex}, I=${I}, az=${az}°, el=${el}°, dist=${di}
+      </p>`;
+  };
+
+  let html = `
+    <p><strong>Base:</strong>
+      <span class="swatch" style="background:${baseHex}"></span>
+      ${baseName} <code>${baseHex.toUpperCase()}</code>
+    </p>
+    ${lightRow("Key",  !!keyEnabled?.checked,  lightColor, lightIntensity, keyAz, keyEl, keyDist)}
+    ${lightRow("Fill", !!fillEnabled?.checked, fillColor, fillIntensity, fillAz, fillEl, fillDist)}
+    ${lightRow("Rim",  !!rimEnabled?.checked,  rimColor,  rimIntensity,  rimAz, rimEl, rimDist)}
+  `;
+
+  if (pickedSamples.length) {
+    html += `<hr><p><strong>Samples:</strong></p>`;
+    for (const s of pickedSamples) {
+      const close = nearestPaint(s.hex);
+      const mix   = bestTwoPaintMix(s.hex);
+      html += `
+        <div style="margin:6px 0; line-height:1.35">
+          <span class="swatch" style="background:${s.hex}"></span>
+          <code>${s.hex.toUpperCase()}</code><br/>
+          <small>Closest:
+            <span class="swatch" style="background:${close.hex}"></span>
+            ${close.name} <code>${close.hex.toUpperCase()}</code>
+          </small><br/>
+          <small>Mix:
+            ${mix.aPct}% ${mix.aName}
+            <span class="swatch" style="background:${mix.aHex}"></span>
+            + ${mix.bPct}% ${mix.bName}
+            <span class="swatch" style="background:${mix.bHex}"></span>
+            → <code>${mix.mixHex.toUpperCase()}</code>
+          </small>
+        </div>
+      `;
+    }
+  }
+
+  recipeBody.innerHTML = html;
+  // ensure the panel is visible
+  if (recipePanel) recipePanel.style.display = "";
+}
+
+// ——— picker interactions ———
 pickerOverlay?.addEventListener("mousemove", (e) => {
   if (pickerOverlay.hidden) return;
 
@@ -397,19 +516,19 @@ pickerOverlay?.addEventListener("mousemove", (e) => {
   setChipAppearance(hex);
 });
 
-// Click to copy hex; also prefill custom color; exit picker
+// Click to add a sample (do NOT exit picker)
 pickerOverlay?.addEventListener("click", async (e) => {
   const hex = sampleCanvasHexAt(e.clientX, e.clientY);
   if (!hex) return;
-  try {
-    await navigator.clipboard.writeText(hex.toUpperCase());
-    if (pickerChip) pickerChip.textContent = `${hex.toUpperCase()} ✓`;
-    if (newColorHex) newColorHex.value = hex;
-  } catch {
-    if (pickerChip) pickerChip.textContent = `${hex.toUpperCase()} (copy failed)`;
-  }
-  // slight delay so user can see ✓, then exit
-  setTimeout(exitPickerMode, 140);
+
+  pickedSamples.push({ hex });
+  setChipAppearance(hex);
+
+  // clipboard + prefill
+  try { await navigator.clipboard.writeText(hex.toUpperCase()); } catch {}
+  if (newColorHex) newColorHex.value = hex;
+
+  renderPickerRecipe(); // update samples list in the recipe panel
 });
 
 // open / close picker
@@ -421,9 +540,12 @@ function enterPickerMode() {
   isPickerPaused = true;      // freeze current frame (buffer preserved)
   controls.enabled = false;
   if (pickerOverlay) pickerOverlay.hidden = false;
+  pickedSamples = [];
+  renderPickerRecipe();       // show base + current light setup, empty samples
 }
 function exitPickerMode() {
   if (pickerOverlay) pickerOverlay.hidden = true;
   controls.enabled = true;
   isPickerPaused = false;     // resume rendering
+  setChipAppearance(null);
 }
