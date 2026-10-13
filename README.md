@@ -40,7 +40,7 @@ Think of it as your digital lighting rig and recipe book, built for hobbyists wh
 
 | Blue Ultramarine Steel (NMM) | Steel Reflections (NMM) | Torchlight Glow (OSL) | Multi-colored Setup |
 |-------------------------------|--------------------------|------------------------|----------------------|
-| ![Blue Ultramarine Steel](sample1.png) | ![Steel NMM](sample2.png) | ![Warm OSL](sample4.png) | ![Multi-light](sample3.png) |
+| ![Blue Ultramarine Steel](docs/sample1.png) | ![Steel NMM](docs/sample2.png) | ![Warm OSL](docs/sample4.png) | ![Multi-light](docs/sample3.png) |
 
 
 
