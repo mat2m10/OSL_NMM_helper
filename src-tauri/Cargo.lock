@@ -2415,7 +2415,7 @@ dependencies = [
 
 [[package]]
 name = "osl_nmm_helper"
-version = "0.1.0"
+version = "0.1.7"
 dependencies = [
  "serde",
  "serde_json",
