@@ -50,7 +50,7 @@ jobs:
 
       # --- Tauri CLI ---
       - name: Install Tauri CLI
-        run: cargo install tauri-cli --locked
+        run: cargo install tauri-cli --version "^2" --locked
 
       # --- Build ---
       - name: Build Tauri
