@@ -48,3 +48,7 @@ Think of it as your digital lighting rig and recipe book, built for hobbyists wh
 
 - Built with [Tauri](https://tauri.app/) for fast, lightweight desktop apps  
 - Built with ❤️ for miniature painters everywhere  
+
+---
+
+*Citadel, Vallejo and The Army Painter paint names and colours are trademarks of their respective owners (Games Workshop, Acrylicos Vallejo and The Army Painter). This is an unofficial fan tool, not affiliated with or endorsed by any of them; on-screen colours are approximations.*
