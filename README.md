@@ -60,6 +60,10 @@ The frontend is plain HTML/JS in `src/` (no Node build step needed).
 - Built with [Tauri](https://tauri.app/) for fast, lightweight desktop apps  
 - Built with ❤️ for miniature painters everywhere
 
+## 📄 License
+
+MIT, see [LICENSE](LICENSE). The vendored three.js files in `src/vendor/` keep their own MIT licence (see `src/vendor/README.md`).
+
 ---
 
 ## ☕ Support  
