@@ -1,0 +1,12 @@
+{
+  "name": "osl-nmm-helper",
+  "private": true,
+  "type": "module",
+  "description": "Frontend helper scripts. The app itself needs no Node build step; this file only enables `npm test`.",
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
