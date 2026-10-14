@@ -1,6 +1,8 @@
 // src/data/citadelColors.js
 // Citadel palette. Data: ./palettes/citadel.json
-import { loadPaletteHex, toRgbPalette } from "./loadPalette.js";
+import { fillPalette } from "./loadPalette.js";
 
-export const CITADEL_COLORS_HEX = await loadPaletteHex("citadel.json");
-export const CITADEL_COLORS_RGB = toRgbPalette(CITADEL_COLORS_HEX);
+// Filled in place once citadel.json has loaded; await citadelReady before reading.
+export const CITADEL_COLORS_HEX = {};
+export const CITADEL_COLORS_RGB = {};
+export const citadelReady = fillPalette("citadel.json", CITADEL_COLORS_HEX, CITADEL_COLORS_RGB);

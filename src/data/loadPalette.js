@@ -23,6 +23,16 @@ export async function loadPaletteHex(file) {
   }
 }
 
+// Fill `hexMap` and `rgbMap` in place once the JSON has loaded.
+// The brand modules export these objects synchronously and main.js awaits the
+// returned promise inside its startup code. This avoids top-level await, which
+// the system WebKit on macOS 10.13/10.14 (Safari 13/14, still allowed by
+// tauri.conf.json's minimumSystemVersion) cannot parse.
+export async function fillPalette(file, hexMap, rgbMap) {
+  Object.assign(hexMap, await loadPaletteHex(file));
+  Object.assign(rgbMap, toRgbPalette(hexMap));
+}
+
 // Derived palette (RGB arrays) for algorithms that expect numeric channels
 export const toRgbPalette = (hexMap) =>
   Object.fromEntries(Object.entries(hexMap).map(([name, hex]) => [name, hexToRgb(hex)]));
