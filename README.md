@@ -66,3 +66,7 @@ The frontend is plain HTML/JS in `src/` (no Node build step needed).
 
 If this helps your hobby, fuel mine:  
 👉 [Buy me a coffee](https://buymeacoffee.com/mat2m10)
+
+---
+
+*Citadel, Vallejo and The Army Painter paint names and colours are trademarks of their respective owners (Games Workshop, Acrylicos Vallejo and The Army Painter). This is an unofficial fan tool, not affiliated with or endorsed by any of them; on-screen colours are approximations.*
