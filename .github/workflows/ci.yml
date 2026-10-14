@@ -1,0 +1,75 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: Rust (check + clippy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Linux deps (WebKitGTK)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: cargo check
+        working-directory: src-tauri
+        run: cargo check --locked --all-targets
+
+      - name: cargo clippy
+        working-directory: src-tauri
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+  js:
+    name: JS (syntax + tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The frontend is plain ES modules with no package.json, so check each
+      # file's syntax as a module (vendored three.js is skipped).
+      - name: Syntax check (ES modules)
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r f; do
+            if ! node --check --input-type=module < "$f"; then
+              echo "::error file=$f::syntax error"
+              status=1
+            fi
+          done < <(git ls-files 'src/*.js' ':!src/vendor/*')
+          exit $status
+
+      - name: Unit tests (node --test)
+        shell: bash
+        run: |
+          if compgen -G "tests/*.test.js" > /dev/null; then
+            node --test "tests/*.test.js"
+          else
+            echo "No tests/*.test.js yet, skipping."
+          fi
