@@ -1,0 +1,38 @@
+// src/data/loadPalette.js
+// Loads a paint palette (name -> "#rrggbb") from src/data/palettes/*.json.
+//
+// Palettes live in JSON so they are easy to update or contribute to without
+// touching code. Hex values are *UI display approximations* of the real
+// paints (good for swatches and matching, not lab-accurate).
+//
+// TODO(owner): record where each palette's hex values come from and when they
+// were last checked (e.g. a "Source: ..., checked YYYY-MM-DD" line per brand
+// in src/data/palettes/README.md).
+import { hexToRgb } from "../lib/colorMath.js";
+
+export async function loadPaletteHex(file) {
+  try {
+    const res = await fetch(new URL(`./palettes/${file}`, import.meta.url));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    // Keep the app usable: main.js falls back to a default colour when a
+    // brand palette is empty.
+    console.error(`Could not load palette ${file}:`, err);
+    return {};
+  }
+}
+
+// Fill `hexMap` and `rgbMap` in place once the JSON has loaded.
+// The brand modules export these objects synchronously and main.js awaits the
+// returned promise inside its startup code. This avoids top-level await, which
+// the system WebKit on macOS 10.13/10.14 (Safari 13/14, still allowed by
+// tauri.conf.json's minimumSystemVersion) cannot parse.
+export async function fillPalette(file, hexMap, rgbMap) {
+  Object.assign(hexMap, await loadPaletteHex(file));
+  Object.assign(rgbMap, toRgbPalette(hexMap));
+}
+
+// Derived palette (RGB arrays) for algorithms that expect numeric channels
+export const toRgbPalette = (hexMap) =>
+  Object.fromEntries(Object.entries(hexMap).map(([name, hex]) => [name, hexToRgb(hex)]));

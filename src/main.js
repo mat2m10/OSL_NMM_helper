@@ -1,9 +1,9 @@
 // src/main.js
 import * as THREE from "./vendor/three.module.js";
 import { OrbitControls } from "./vendor/OrbitControls.js";
-import { CITADEL_COLORS_RGB }      from "./data/citadelColors.js";
-import { VALLEJO_COLORS_RGB }      from "./data/vallejoColors.js";
-import { ARMY_PAINTER_COLORS_RGB } from "./data/armyPainterColors.js";
+import { CITADEL_COLORS_RGB, citadelReady }           from "./data/citadelColors.js";
+import { VALLEJO_COLORS_RGB, vallejoReady }           from "./data/vallejoColors.js";
+import { ARMY_PAINTER_COLORS_RGB, armyPainterReady } from "./data/armyPainterColors.js";
 import { PRESETS } from "./data/presets.js";
 import { buildRecipeHTML, formatRecipeText } from "./ui/recipe.js";
 import { rgbToHex, hexToRgb } from "./lib/colorMath.js";
@@ -376,10 +376,14 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
-// Build palette BEFORE any recipe rendering
-rebuildRuntimePalette();
-populatePaletteDropdown();
-applyStartupState();
+// Build palette BEFORE any recipe rendering. The palettes load from JSON
+// asynchronously (see data/loadPalette.js); a failed file becomes an empty
+// palette, so this always runs.
+Promise.all([citadelReady, vallejoReady, armyPainterReady]).then(() => {
+  rebuildRuntimePalette();
+  populatePaletteDropdown();
+  applyStartupState();
+});
 
 let isPickerPaused = false;
 function tick() {
